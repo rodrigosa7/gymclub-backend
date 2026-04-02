@@ -2,21 +2,35 @@
   "name": "gymclub-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Hevy-inspired workout tracking backend MVP",
+  "description": "Hevy-inspired workout tracking backend built with NestJS, Prisma, and PostgreSQL",
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/main.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "check": "tsc --noEmit"
+    "start": "node dist/main.js",
+    "check": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "tsx prisma/seed.ts",
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.2"
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/platform-express": "^11.1.0",
+    "@prisma/client": "^6.7.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.1",
     "@types/node": "^22.13.14",
+    "prisma": "^6.7.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }

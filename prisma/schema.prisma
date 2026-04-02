@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WeightUnit {
+  kg
+  lb
+}
+
+enum ExerciseCategory {
+  strength
+  cardio
+  mobility
+}
+
+enum Equipment {
+  barbell
+  dumbbell
+  cable
+  machine
+  bodyweight
+  kettlebell
+  cardio
+  smith_machine
+}
+
+enum SetType {
+  warmup
+  working
+  dropset
+  failure
+  assisted
+}
+
+enum WorkoutStatus {
+  active
+  completed
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  preferredWeightUnit WeightUnit
+  createdAt           DateTime  @default(now())
+  routines            Routine[]
+  workouts            Workout[]
+}
+
+model Exercise {
+  id               String            @id
+  slug             String            @unique
+  name             String
+  category         ExerciseCategory
+  muscleGroups     Json
+  equipment        Equipment
+  instructions     Json
+  routineExercises RoutineExercise[]
+  workoutExercises WorkoutExercise[]
+}
+
+model Routine {
+  id          String            @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises   RoutineExercise[]
+  workouts    Workout[]
+
+  @@index([userId])
+}
+
+model RoutineExercise {
+  id          String             @id @default(cuid())
+  routineId   String
+  exerciseId  String
+  order       Int
+  notes       String
+  restSeconds Int
+  routine     Routine            @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise    Exercise           @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets        RoutineTargetSet[]
+
+  @@unique([routineId, order])
+  @@index([exerciseId])
+}
+
+model RoutineTargetSet {
+  id               String          @id @default(cuid())
+  routineExerciseId String
+  order            Int
+  type             SetType
+  targetRepsMin    Int?
+  targetRepsMax    Int?
+  targetWeightKg   Decimal?        @db.Decimal(10, 2)
+  routineExercise  RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([routineExerciseId, order])
+}
+
+model Workout {
+  id          String          @id @default(cuid())
+  userId      String
+  routineId   String?
+  name        String
+  notes       String
+  status      WorkoutStatus
+  startedAt   DateTime
+  completedAt DateTime?
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  routine     Routine?        @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  exercises   WorkoutExercise[]
+
+  @@index([userId, status])
+}
+
+model WorkoutExercise {
+  id          String       @id @default(cuid())
+  workoutId   String
+  exerciseId  String
+  order       Int
+  notes       String
+  restSeconds Int
+  workout     Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise    Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  sets        WorkoutSet[]
+
+  @@unique([workoutId, order])
+  @@index([exerciseId])
+}
+
+model WorkoutSet {
+  id              String          @id @default(cuid())
+  workoutExerciseId String
+  order           Int
+  type            SetType
+  reps            Int?
+  weightKg        Decimal?        @db.Decimal(10, 2)
+  durationSeconds Int?
+  distanceMeters  Decimal?        @db.Decimal(10, 2)
+  rir             Int?
+  isComplete      Boolean
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([workoutExerciseId, order])
+}
