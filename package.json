@@ -7,9 +7,10 @@
     "seed": "tsx prisma/seed.ts"
   },
   "scripts": {
-    "dev": "tsx watch src/main.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js",
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main",
+    "start:debug": "nest start --debug --watch",
     "check": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -29,6 +30,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
+    "@nestjs/cli": "^11.1.0",
     "@types/node": "^22.13.14",
     "prisma": "^6.7.0",
     "tsx": "^4.19.3",
