@@ -464,6 +464,18 @@ export class WorkoutsService {
     const user = await this.currentUserService.getRequiredUser();
     const now = new Date();
 
+    // Filter exercises to only those with at least one completed set
+    const completedExercises = body.exercises.filter((ex) =>
+      ex.sets.some((s) => s.isComplete)
+    );
+
+    if (completedExercises.length === 0) {
+      throw new AppException(
+        "At least one set must be completed before saving.",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     const workout = await this.prisma.workout.create({
       data: {
         userId: user.id,
@@ -474,24 +486,26 @@ export class WorkoutsService {
         startedAt: new Date(body.startedAt),
         completedAt: new Date(body.completedAt),
         exercises: {
-          create: body.exercises.map((ex, exIndex) => ({
+          create: completedExercises.map((ex, exIndex) => ({
             exerciseId: ex.exerciseId,
             order: exIndex + 1,
             notes: ex.notes?.trim() ?? "",
             restSeconds: ex.restSeconds ?? 90,
             sets: {
-              create: ex.sets.map((s, setIndex) => ({
-                order: setIndex + 1,
-                type: s.type ?? "working",
-                reps: s.reps ?? null,
-                weightKg: s.weightKg ?? null,
-                durationSeconds: s.durationSeconds ?? null,
-                distanceMeters: s.distanceMeters ?? null,
-                rir: s.rir ?? null,
-                isComplete: s.isComplete ?? false,
-                createdAt: now,
-                completedAt: s.isComplete ? now : null,
-              })),
+              create: ex.sets
+                .filter((s) => s.isComplete)
+                .map((s, setIndex) => ({
+                  order: setIndex + 1,
+                  type: s.type ?? "working",
+                  reps: s.reps ?? null,
+                  weightKg: s.weightKg ?? null,
+                  durationSeconds: s.durationSeconds ?? null,
+                  distanceMeters: s.distanceMeters ?? null,
+                  rir: s.rir ?? null,
+                  isComplete: true,
+                  createdAt: now,
+                  completedAt: now,
+                })),
             },
           })),
         },
