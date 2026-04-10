@@ -8,6 +8,8 @@ import { workoutInclude } from "../../shared/prisma-include";
 import { AppException } from "../../shared/app.exception";
 import { serializeWorkout } from "../../shared/serializers";
 import { PrismaService } from "../prisma/prisma.service";
+import { SyncWorkoutDto } from "./dto/sync-workout.dto";
+import { SaveCompletedWorkoutDto } from "./dto/save-completed-workout.dto";
 import { AddWorkoutExerciseDto } from "./dto/add-workout-exercise.dto";
 import { AddWorkoutSetDto } from "./dto/add-workout-set.dto";
 import { StartWorkoutDto } from "./dto/start-workout.dto";
@@ -207,7 +209,7 @@ export class WorkoutsService {
         durationSeconds: body.durationSeconds ?? null,
         distanceMeters: body.distanceMeters ?? null,
         rir: body.rir ?? null,
-        isComplete: body.isComplete ?? true,
+        isComplete: body.isComplete ?? false,
         createdAt: now,
         completedAt: body.isComplete === false ? null : now,
       },
@@ -402,6 +404,102 @@ export class WorkoutsService {
     });
 
     return this.getWorkout(workoutId);
+  }
+
+  async syncWorkout(workoutId: string, body: SyncWorkoutDto): Promise<ReturnType<typeof serializeWorkout>> {
+    const workout = await this.getOwnedWorkout(workoutId, "active");
+
+    await this.prisma.$transaction(async (tx) => {
+      // Delete existing exercises and their sets
+      await tx.workoutExercise.deleteMany({
+        where: { workoutId },
+      });
+
+      // Re-create exercises and sets
+      for (const ex of body.exercises) {
+        const now = new Date();
+        const created = await tx.workoutExercise.create({
+          data: {
+            id: ex.id ?? randomUUID(),
+            workoutId,
+            exerciseId: ex.exerciseId,
+            order: body.exercises.indexOf(ex),
+            notes: ex.notes ?? "",
+            restSeconds: ex.restSeconds ?? 0,
+          },
+        });
+
+        for (const s of ex.sets) {
+          await tx.workoutSet.create({
+            data: {
+              id: s.id ?? randomUUID(),
+              workoutExerciseId: created.id,
+              order: ex.sets.indexOf(s),
+              type: s.type ?? "working",
+              reps: s.reps ?? null,
+              weightKg: s.weightKg ?? null,
+              durationSeconds: s.durationSeconds ?? null,
+              distanceMeters: s.distanceMeters ?? null,
+              rir: s.rir ?? null,
+              isComplete: s.isComplete ?? false,
+              createdAt: now,
+              completedAt: s.isComplete ? now : null,
+            },
+          });
+        }
+      }
+    });
+
+    if (body.name) {
+      await this.prisma.workout.update({
+        where: { id: workoutId },
+        data: { name: body.name, notes: body.notes ?? workout.notes },
+      });
+    }
+
+    return this.getWorkout(workoutId);
+  }
+
+  async saveCompletedWorkout(body: SaveCompletedWorkoutDto): Promise<ReturnType<typeof serializeWorkout>> {
+    const user = await this.currentUserService.getRequiredUser();
+    const now = new Date();
+
+    const workout = await this.prisma.workout.create({
+      data: {
+        userId: user.id,
+        routineId: null,
+        name: body.name,
+        notes: body.notes?.trim() ?? "",
+        status: "completed",
+        startedAt: new Date(body.startedAt),
+        completedAt: new Date(body.completedAt),
+        exercises: {
+          create: body.exercises.map((ex, exIndex) => ({
+            exerciseId: ex.exerciseId,
+            order: exIndex + 1,
+            notes: ex.notes?.trim() ?? "",
+            restSeconds: ex.restSeconds ?? 90,
+            sets: {
+              create: ex.sets.map((s, setIndex) => ({
+                order: setIndex + 1,
+                type: s.type ?? "working",
+                reps: s.reps ?? null,
+                weightKg: s.weightKg ?? null,
+                durationSeconds: s.durationSeconds ?? null,
+                distanceMeters: s.distanceMeters ?? null,
+                rir: s.rir ?? null,
+                isComplete: s.isComplete ?? false,
+                createdAt: now,
+                completedAt: s.isComplete ? now : null,
+              })),
+            },
+          })),
+        },
+      },
+      include: workoutInclude,
+    });
+
+    return serializeWorkout(workout);
   }
 
   async listCompletedWorkouts(): Promise<ReturnType<typeof serializeWorkout>[]> {

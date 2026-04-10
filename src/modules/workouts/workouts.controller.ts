@@ -1,8 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from "@nestjs/common";
 
 import { AddWorkoutExerciseDto } from "./dto/add-workout-exercise.dto";
 import { AddWorkoutSetDto } from "./dto/add-workout-set.dto";
+import { SaveCompletedWorkoutDto } from "./dto/save-completed-workout.dto";
 import { StartWorkoutDto } from "./dto/start-workout.dto";
+import { SyncWorkoutDto } from "./dto/sync-workout.dto";
 import { UpdateWorkoutSetDto } from "./dto/update-workout-set.dto";
 import { WorkoutsService } from "./workouts.service";
 
@@ -92,6 +94,23 @@ export class WorkoutsController {
   ): Promise<{ data: unknown }> {
     return {
       data: await this.workoutsService.completeWorkout(workoutId, body?.notes),
+    };
+  }
+
+  @Post()
+  async saveCompletedWorkout(@Body() body: SaveCompletedWorkoutDto): Promise<{ data: unknown }> {
+    return {
+      data: await this.workoutsService.saveCompletedWorkout(body),
+    };
+  }
+
+  @Put(":workoutId")
+  async syncWorkout(
+    @Param("workoutId") workoutId: string,
+    @Body() body: SyncWorkoutDto,
+  ): Promise<{ data: unknown }> {
+    return {
+      data: await this.workoutsService.syncWorkout(workoutId, body),
     };
   }
 }
