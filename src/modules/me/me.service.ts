@@ -7,8 +7,8 @@ import { serializeUser } from "../../shared/serializers";
 export class MeService {
   constructor(private readonly currentUserService: CurrentUserService) {}
 
-  async getMe(): Promise<ReturnType<typeof serializeUser>> {
-    const user = await this.currentUserService.getRequiredUser();
+  async getMe(userId: string): Promise<ReturnType<typeof serializeUser>> {
+    const user = await this.currentUserService.getRequiredUser(userId);
     return serializeUser(user);
   }
 }
