@@ -46,6 +46,7 @@ model User {
   id                  String    @id @default(cuid())
   name                String
   email               String    @unique
+  passwordHash        String
   preferredWeightUnit WeightUnit
   createdAt           DateTime  @default(now())
   routines            Routine[]
